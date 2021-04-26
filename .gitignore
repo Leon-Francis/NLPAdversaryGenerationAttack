@@ -1,1 +1,8 @@
+__pycache__/
+seq2seq_model/
 .vscode/
+dataset/
+baseline_module/baseline_models/
+*.log
+static/
+output/

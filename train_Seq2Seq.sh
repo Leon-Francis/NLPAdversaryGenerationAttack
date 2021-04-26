@@ -1,0 +1,1 @@
+nohup python train_Seq2Seq.py > train_Seq2Seq_IMDB_Bert_fineturing_0.log 2>&1 &
