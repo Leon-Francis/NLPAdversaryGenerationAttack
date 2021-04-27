@@ -36,7 +36,7 @@ class AttackConfig():
     dropout = 0.3
     vocab_size = bert_vocab_size
     gan_clamp = 0.01
-    noise_std = 0.2
+    noise_std = 0.002
     samples_num = 20
 
     gan_schedule = [2, 4, 6]

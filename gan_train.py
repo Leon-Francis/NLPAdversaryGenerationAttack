@@ -329,7 +329,7 @@ if __name__ == '__main__':
                      cur_dir_models + f'/epoch{epoch+1}_evaluate_gan',
                      baseline_model_builder.vocab)
 
-        if (epoch + 1) % 5 == 5:
+        if (epoch + 1) % 5 == 0:
             os.makedirs(cur_dir_models + f'/epoch{epoch+1}')
             save_all_models(Seq2Seq_model, gan_gen, gan_dis,
                             cur_dir_models + f'/epoch{epoch+1}')
