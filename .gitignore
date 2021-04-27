@@ -6,3 +6,5 @@ baseline_module/baseline_models/
 *.log
 static/
 output/
+texts/
+result/

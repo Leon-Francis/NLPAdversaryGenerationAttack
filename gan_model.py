@@ -167,20 +167,14 @@ class Discriminator(nn.Module):
                             dropout=self.dropout,
                             bidirectional=self.bidirectional,
                             batch_first=True)
-        self.linear = None
-        if self.bidirectional:
-            self.linear = nn.Linear(self.hidden_size * 2, self.hidden_size)
 
-        self.fc = nn.Sequential(nn.LeakyReLU(0.2, inplace=True),
-                                nn.Linear(hidden_size, 1))
+        if self.bidirectional:
+            self.linear = nn.Linear(self.hidden_size * 2, 1)
+        else:
+            self.linear = nn.Linear(self.hidden_size, 1)
 
     def forward(self, inputs):
         # input: [batch_size, sen_len, hidden_size]
         out, _ = self.lstm(inputs)
-        if self.bidirectional:
-            out_bid = self.linear(out)
-            output = self.fc(out_bid).squeeze(dim=2)
-        # output: [batch_size, 1]
-        else:
-            output = self.fc(out).squeeze(dim=2)
-        return torch.mean(output)
+        output = self.linear(out)
+        return torch.mean(output.squeeze(dim=2))

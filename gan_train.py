@@ -284,7 +284,7 @@ if __name__ == '__main__':
         total_loss_Seq2Seq = 0
         total_loss_gan_g = 0
         total_loss_gan_d = 0
-        logging(f'Training {epoch} epoch')
+        logging(f'Training {epoch+1} epoch')
         for x, x_mask, y, label in train_data:
             niter += 1
             x, x_mask, y, label = x.to(AttackConfig.train_device), x_mask.to(
@@ -318,29 +318,29 @@ if __name__ == '__main__':
             if niter % 100 == 0:
                 # decaying noise
                 logging(
-                    f'epoch {epoch}, niter {niter}:Loss_Seq2Seq: {total_loss_Seq2Seq / niter / AttackConfig.batch_size / AttackConfig.seq2seq_train_times}, Loss_gan_g: {total_loss_gan_g / niter / AttackConfig.batch_size / AttackConfig.gan_gen_train_times}, Loss_gan_a: {total_loss_gan_d / niter / AttackConfig.batch_size / AttackConfig.gan_dis_train_times}'
+                    f'epoch {epoch+1}, niter {niter}:Loss_Seq2Seq: {total_loss_Seq2Seq / niter / AttackConfig.batch_size / AttackConfig.seq2seq_train_times}, Loss_gan_g: {total_loss_gan_g / niter / AttackConfig.batch_size / AttackConfig.gan_gen_train_times}, Loss_gan_a: {total_loss_gan_d / niter / AttackConfig.batch_size / AttackConfig.gan_dis_train_times}'
                 )
 
         # end of epoch --------------------------------
         # evaluation
 
-        logging(f'epoch {epoch} evaluate gan')
+        logging(f'epoch {epoch+1} evaluate gan')
         evaluate_gan(test_data, Seq2Seq_model, gan_gen,
-                     cur_dir_models + f'/epoch{epoch}_evaluate_gan',
+                     cur_dir_models + f'/epoch{epoch+1}_evaluate_gan',
                      baseline_model_builder.vocab)
 
-        if (epoch + 1) % 5 == 1:  # **
-            os.makedirs(cur_dir_models + f'/epoch{epoch}')
+        if (epoch + 1) % 5 == 5:
+            os.makedirs(cur_dir_models + f'/epoch{epoch+1}')
             save_all_models(Seq2Seq_model, gan_gen, gan_dis,
-                            cur_dir_models + f'/epoch{epoch}')
+                            cur_dir_models + f'/epoch{epoch+1}')
 
-            logging(f'epoch {epoch} Staring perturb')
+            logging(f'epoch {epoch+1} Staring perturb')
+            text_dir = cur_dir + f'/text/epoch{epoch+1}'
+            if not os.path.isdir(text_dir):
+                os.makedirs(text_dir)
             # attach_acc: [search_time, sample_num]
-            output_dir = f'./texts/OUR/{AttackConfig.dataset}/{AttackConfig.baseline_model_name}/epoch{epoch+1}'
-            if not os.path.isdir(output_dir):
-                os.makedirs(output_dir)
-            refs_dir = output_dir + f'/refs_{AttackConfig.noise_std}_{AttackConfig.samples_num}.txt'
-            cands_dir = output_dir + f'/cands_{AttackConfig.noise_std}_{AttackConfig.samples_num}.txt'
+            refs_dir = text_dir + f'/refs_{AttackConfig.noise_std}_{AttackConfig.samples_num}.txt'
+            cands_dir = text_dir + f'/cands_{AttackConfig.noise_std}_{AttackConfig.samples_num}.txt'
             attack_acc = perturb(test_data, Seq2Seq_model, gan_gen,
                                  baseline_model_builder.net, cands_dir,
                                  refs_dir, baseline_model_builder.vocab,

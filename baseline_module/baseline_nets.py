@@ -196,9 +196,9 @@ class baseline_Bert(nn.Module):
 
     def forward_with_embedding(self, embeddings:torch.Tensor):
         # [batch, seq, Bert_hidden_size]
-        assert embeddings.dim()[-1] == 768
+        assert embeddings.shape[-1] == 768
 
-        encoder, pooled = self.bert_model(input_embeds=embeddings)[:]
+        encoder, pooled = self.bert_model(inputs_embeds=embeddings)[:]
 
         logits = self.fc(pooled)
         return logits

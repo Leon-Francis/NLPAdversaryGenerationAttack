@@ -14,9 +14,9 @@ class AttackConfig():
     train_device = torch.device('cuda:' + str(cuda_idx))
     dataset = 'IMDB'  # choices = 'IMDB', 'AGNEWS', 'SNLI'
     baseline_model = 'Bert'  # choices = 'LSTM', 'TextCNN', 'BidLSTM', 'Bert'
-    debug_mode = True  # **
+    debug_mode = False
     epochs = 30
-    batch_size = 32
+    batch_size = 16
 
     load_pretrained_Seq2Seq = True
     head_tail = False
@@ -32,8 +32,6 @@ class AttackConfig():
     dis_learning_rate = 1e-3
 
     hidden_size = 768
-    gan_gen_layers = '768-768'
-    gan_dis_layers = '768-768'
     num_layers = 3
     dropout = 0.3
     vocab_size = bert_vocab_size
@@ -50,8 +48,6 @@ class AttackConfig():
         if dataset == 'IMDB':
             if baseline_model == 'Bert':
                 pretrained_Seq2Seq_path = r'./output/seq2seq_model/IMDB/1619438388/Seq2Seq_model.pt'
-            else:
-                pretrained_Seq2Seq_path = r'./seq2seq_model/IMDB/1615541232/Seq2Seq_model.pt'  # **
 
 
 class IMDBConfig():

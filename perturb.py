@@ -25,7 +25,7 @@ def perturb(data, Seq2Seq_model, gan_gen, baseline_model, cands_dir, refs_dir,
                 # c: [batch, sen_len, hidden_size]
                 z = Seq2Seq_model(x, x_mask, is_noise=False, encode_only=True)
 
-                if AttackConfig.baseline_model_name == 'Bert':
+                if AttackConfig.baseline_model == 'Bert':
                     x_type = torch.zeros(y.shape, dtype=torch.int64).to(
                         AttackConfig.train_device)
                     skiped = label != baseline_model(y, x_type,
@@ -155,7 +155,7 @@ def search_fast(Seq2Seq_model, generator, baseline_model, label, z,
                     perturb_x_all = torch.cat((perturb_x_all, perturb_x),
                                               dim=0)
 
-                if AttackConfig.baseline_model_name == 'Bert':
+                if AttackConfig.baseline_model == 'Bert':
                     perturb_x_mask = torch.ones(perturb_x.shape,
                                                 dtype=torch.int64)
                     # mask before [SEP]
@@ -192,7 +192,7 @@ def search_fast(Seq2Seq_model, generator, baseline_model, label, z,
             # search_z: [samples_num, sen_len, super_hidden_size]
             search_z = z.repeat(samples_num, 1, 1)
             delta = torch.normal(mean=torch.zeros_like(search_z),
-                                 std=search_bound)
+                                 std=search_bound).to(torch.device('cpu'))
             dist = np.array([np.sqrt(np.sum(x**2)) for x in delta.numpy()])
             delta = delta.to(AttackConfig.train_device)
             search_z += delta
@@ -202,7 +202,7 @@ def search_fast(Seq2Seq_model, generator, baseline_model, label, z,
             perturb_x = Seq2Seq_model.decode(perturb_hidden,
                                              to_vocab=True).argmax(dim=2)
 
-            if AttackConfig.baseline_model_name == 'Bert':
+            if AttackConfig.baseline_model == 'Bert':
                 perturb_x_mask = torch.ones(perturb_x.shape, dtype=torch.int64)
                 # mask before [SEP]
                 for i in range(perturb_x.shape[0]):
