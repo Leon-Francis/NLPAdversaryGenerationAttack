@@ -1,1 +1,1 @@
-nohup python gan_train.py > ./result/train_results_IMDB_Bert_0.log 2>&1 &
+nohup python gan_train.py > ./result/train_results_IMDB_Bert_remove-discrimitor_0.log 2>&1 &
