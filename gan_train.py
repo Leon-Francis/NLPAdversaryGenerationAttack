@@ -10,7 +10,7 @@ from shutil import copyfile
 from data import AGNEWS_Dataset, IMDB_Dataset, SNLI_Dataset, SST2_Dataset
 from transformers import BertTokenizer
 from baseline_module.baseline_model_builder import BaselineModelBuilder
-from gan_model import Seq2Seq_bert, Generator, Discriminator
+from gan_model import Seq2Seq_bert, Generator
 from perturb import perturb
 from calc_BertScore_ppl import calc_bert_score_ppl
 
@@ -64,21 +64,23 @@ def train_gan_d(train_data, Seq2Seq_model, gan_gen, gan_dis, optimizer_gan_d):
     return loss.item()
 
 
-def train_gan_g(train_data, Seq2Seq_model, gan_gen, gan_dis, baseline_model,
-                optimizer_gan_g, criterion_ce):
+def train_gan_g(train_data, Seq2Seq_model, gan_gen, baseline_model,
+                optimizer_gan_g, criterion_ce, criterion_mse):
     Seq2Seq_model.train()
     gan_gen.train()
-    gan_dis.train()
     baseline_model.train()
     gan_gen.zero_grad()
 
     x, x_mask, y, label = train_data
 
+    real_hidden = Seq2Seq_model(x, x_mask, is_noise=False, encode_only=True)
+
     fake_hidden = gan_gen(
         Seq2Seq_model(x, x_mask, is_noise=True, encode_only=True))
 
     # similarty loss
-    loss_S = gan_dis(fake_hidden)
+    loss_S = criterion_mse(real_hidden.reshape(real_hidden.shape[0], -1),
+                           fake_hidden.reshape(fake_hidden.shape[0], -1))
 
     # attack loss
     perturb_x_logits = Seq2Seq_model.decode(fake_hidden)
@@ -88,7 +90,7 @@ def train_gan_g(train_data, Seq2Seq_model, gan_gen, gan_dis, baseline_model,
     loss_A = criterion_ce(perturb_logits, (label + 1) % 2)
     # loss / backprop
 
-    loss = loss_A - loss_S
+    loss = loss_A + loss_S
     loss.backward()
 
     optimizer_gan_g.step()
@@ -134,7 +136,7 @@ def evaluate_gan(test_data, Seq2Seq_model, gan_gen, dir, attack_vocab):
                             for token in Seq2Seq_idx[i]
                         ]) + '\n')
                         f.write(
-                            '------sentence -> encoder -> inverter -> generator -> decoder-------\n'
+                            '------sentence -> encoder -> generator -> decoder-------\n'
                         )
                         f.write(' '.join([
                             attack_vocab.get_word(token)
@@ -153,7 +155,7 @@ def evaluate_gan(test_data, Seq2Seq_model, gan_gen, dir, attack_vocab):
                                 tokenizer.convert_ids_to_tokens(
                                     Seq2Seq_idx[i])) + '\n')
                         f.write(
-                            '------sentence -> encoder -> inverter -> generator -> decoder-------\n'
+                            '------sentence -> encoder -> generator -> decoder-------\n'
                         )
                         f.write(
                             tokenizer.convert_tokens_to_string(
@@ -161,11 +163,10 @@ def evaluate_gan(test_data, Seq2Seq_model, gan_gen, dir, attack_vocab):
                             '\n' * 2)
 
 
-def save_all_models(Seq2Seq_model, gan_gen, gan_dis, dir):
+def save_all_models(Seq2Seq_model, gan_gen, dir):
     logging('Saving models...')
     torch.save(Seq2Seq_model.state_dict(), dir + '/Seq2Seq_model.pt')
     torch.save(gan_gen.state_dict(), dir + '/gan_gen.pt')
-    torch.save(gan_dis.state_dict(), dir + '/gan_dis.pt')
 
 
 def build_dataset(attack_vocab):
@@ -247,9 +248,6 @@ if __name__ == '__main__':
                        map_location=AttackConfig.train_device))
     gan_gen = Generator(AttackConfig.hidden_size, AttackConfig.hidden_size,
                         AttackConfig.num_layers).to(AttackConfig.train_device)
-    gan_dis = Discriminator(AttackConfig.hidden_size, AttackConfig.hidden_size,
-                            AttackConfig.num_layers).to(
-                                AttackConfig.train_device)
     baseline_model = baseline_model_builder.net
 
     if AttackConfig.fine_tuning:
@@ -268,10 +266,9 @@ if __name__ == '__main__':
                                         lr=AttackConfig.Seq2Seq_learning_rate)
     optimizer_gan_gen = optim.RMSprop(gan_gen.parameters(),
                                       lr=AttackConfig.gen_learning_rate)
-    optimizer_gan_dis = optim.RMSprop(gan_dis.parameters(),
-                                      lr=AttackConfig.dis_learning_rate)
     # init criterion
     criterion_ce = nn.CrossEntropyLoss().to(AttackConfig.train_device)
+    criterion_mse = nn.MSELoss().to(AttackConfig.train_device)
 
     logging('Training Model...')
 
@@ -305,15 +302,11 @@ if __name__ == '__main__':
                             optimizer_Seq2Seq)
 
             for k in range(niter_gan):
-                for i in range(AttackConfig.gan_dis_train_times):
-                    total_loss_gan_d += train_gan_d(
-                        (x, x_mask, y, label), Seq2Seq_model, gan_gen, gan_dis,
-                        optimizer_gan_dis)
-
                 for i in range(AttackConfig.gan_gen_train_times):
                     total_loss_gan_g += train_gan_g(
-                        (x, x_mask, y, label), Seq2Seq_model, gan_gen, gan_dis,
-                        baseline_model, optimizer_gan_gen, criterion_ce)
+                        (x, x_mask, y, label), Seq2Seq_model, gan_gen,
+                        baseline_model, optimizer_gan_gen, criterion_ce,
+                        criterion_mse)
 
             if niter % 100 == 0:
                 # decaying noise
@@ -331,7 +324,7 @@ if __name__ == '__main__':
 
         if (epoch + 1) % 5 == 0:
             os.makedirs(cur_dir_models + f'/epoch{epoch+1}')
-            save_all_models(Seq2Seq_model, gan_gen, gan_dis,
+            save_all_models(Seq2Seq_model, gan_gen,
                             cur_dir_models + f'/epoch{epoch+1}')
 
             logging(f'epoch {epoch+1} Staring perturb')
